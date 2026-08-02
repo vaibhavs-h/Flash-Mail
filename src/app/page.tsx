@@ -120,26 +120,32 @@ function HomeContent() {
   }, [isDarkMode]);
 
   // Fetch emails from Supabase
-  const fetchEmails = async (targetUsername: string) => {
+  const fetchEmails = async (targetUsername: string, isSilent = false) => {
     if (!targetUsername) {
       setEmails([]);
       return;
     }
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     try {
       const res = await fetch(`/api/inbox/${targetUsername}`);
       const json = await res.json();
       if (json.success) {
-        setEmails(json.emails);
+        setEmails((prev) => {
+          if (isSilent && json.emails.length > prev.length) {
+            setNewEmailAlert(true);
+            setTimeout(() => setNewEmailAlert(false), 5000);
+          }
+          return json.emails;
+        });
       }
     } catch (err) {
       console.error("Fetch Exception:", err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
-  // Listen for realtime emails
+  // Listen for realtime emails with background polling fallback
   useEffect(() => {
     if (!username) {
       setEmails([]);
@@ -149,6 +155,7 @@ function HomeContent() {
 
     fetchEmails(username);
 
+    // 1. Supabase Realtime Subscription
     const channel = supabase
       .channel(`inbox-${username}`)
       .on(
@@ -161,17 +168,26 @@ function HomeContent() {
         },
         (payload) => {
           const newMail = payload.new as EmailItem;
-          setEmails((prev) => [newMail, ...prev]);
-          setNewEmailAlert(true);
-          setTimeout(() => setNewEmailAlert(false), 5000);
+          setEmails((prev) => {
+            if (prev.some((e) => e.id === newMail.id)) return prev;
+            setNewEmailAlert(true);
+            setTimeout(() => setNewEmailAlert(false), 5000);
+            return [newMail, ...prev];
+          });
         }
       )
       .subscribe((status) => {
         setRealtimeConnected(status === "SUBSCRIBED");
       });
 
+    // 2. Background Auto-Polling Fallback (every 4 seconds)
+    const pollInterval = setInterval(() => {
+      fetchEmails(username, true);
+    }, 4000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [username]);
 
