@@ -4,8 +4,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FlashMail | Instant Temp Mail on flash-mail.vaibhavs-h.xyz",
-  description: "Lightning-Fast, Self-Hosted Real-Time Disposable Temporary Email Service for flash-mail.vaibhavs-h.xyz",
+  title: "FlashMail | Instant Temp Mail on flash-mail.vaibhav.rs",
+  description: "Lightning-Fast, Self-Hosted Real-Time Disposable Temporary Email Service for flash-mail.vaibhav.rs",
 };
 
 export default function RootLayout({

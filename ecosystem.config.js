@@ -7,7 +7,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         SMTP_PORT: "25",
-        NEXT_PUBLIC_DOMAIN: "flash-mail.vaibhavs-h.xyz",
+        NEXT_PUBLIC_DOMAIN: "flash-mail.vaibhav.rs",
       },
     },
     {

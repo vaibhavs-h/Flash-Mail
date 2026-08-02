@@ -4,7 +4,7 @@ A self-hosted Temporary Email Service. Create disposable email addresses instant
 
 <div align="center">
 
-[View Demo](https://flash-mail.vaibhavs-h.xyz) • [Report Bug](https://github.com/vaibhavs-h/Flash-Mail/issues) • [Request Feature](https://github.com/vaibhavs-h/Flash-Mail/issues)
+[View Demo](https://flash-mail.vaibhav.rs) • [Report Bug](https://github.com/vaibhavs-h/Flash-Mail/issues) • [Request Feature](https://github.com/vaibhavs-h/Flash-Mail/issues)
 
 <br />
 <br />
@@ -23,16 +23,16 @@ A self-hosted Temporary Email Service. Create disposable email addresses instant
 
 ## 📧 SMTP Server Details
 
-- **Server Address:** `flash-mail.vaibhavs-h.xyz`
-- **Email Format:** `your-username@flash-mail.vaibhavs-h.xyz`
-- All emails sent to `{username}@flash-mail.vaibhavs-h.xyz` will be automatically handled
+- **Server Address:** `flash-mail.vaibhav.rs`
+- **Email Format:** `your-username@flash-mail.vaibhav.rs`
+- All emails sent to `{username}@flash-mail.vaibhav.rs` will be automatically handled
 
 ## 🚀 Quick Start
 
-1. Visit [flash-mail.vaibhavs-h.xyz](https://flash-mail.vaibhavs-h.xyz)
+1. Visit [flash-mail.vaibhav.rs](https://flash-mail.vaibhav.rs)
 2. Choose your username
 > ⚠️ **Security Note:** Your username is public. Do not use it for confidential communications.
-3. Start using your temporary email: `{username}@flash-mail.vaibhavs-h.xyz`
+3. Start using your temporary email: `{username}@flash-mail.vaibhav.rs`
 
 ## ⚠️ Limitations
 

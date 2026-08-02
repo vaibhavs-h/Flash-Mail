@@ -1,4 +1,4 @@
--- Supabase Schema for Temp Mail Service (vaibhavs-h.xyz)
+-- Supabase Schema for Temp Mail Service (flash-mail.vaibhav.rs)
 
 CREATE TABLE IF NOT EXISTS emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

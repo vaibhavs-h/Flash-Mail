@@ -13,7 +13,7 @@ dotenv.config({ path: ".env.local" });
 dotenv.config();
 
 const PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 2525;
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhavs-h.xyz";
+const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhav.rs";
 
 const server = new SMTPServer({
   name: `mail.${DOMAIN}`,

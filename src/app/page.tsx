@@ -31,7 +31,7 @@ interface EmailItem {
   expires_at: string;
 }
 
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhavs-h.xyz";
+const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhav.rs";
 
 function HomeContent() {
   const searchParams = useSearchParams();
