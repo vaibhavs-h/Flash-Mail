@@ -553,9 +553,9 @@ function HomeContent() {
 
       {/* EMAIL READER MODAL */}
       {selectedEmail && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md p-4 sm:p-8 flex items-center justify-center font-mono">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md p-3 sm:p-6 flex items-center justify-center font-mono">
           <div
-            className={`border-4 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden p-6 ${
+            className={`border-4 max-w-[1111px] w-full h-[88vh] max-h-[92vh] flex flex-col overflow-hidden p-4 sm:p-6 ${
               isDarkMode
                 ? "bg-[#18181b] text-white border-white shadow-[12px_12px_0px_#ffffff]"
                 : "bg-[#e5e5e5] text-black border-black shadow-[12px_12px_0px_#000000]"
@@ -638,7 +638,7 @@ function HomeContent() {
 
             {/* EMAIL CONTENT DISPLAY */}
             <div
-              className={`flex-1 overflow-y-auto mt-4 p-4 border-4 min-h-[300px] ${
+              className={`flex-1 overflow-y-auto mt-4 p-4 border-4 min-h-[450px] ${
                 isDarkMode ? "bg-[#090d16] text-white border-white" : "bg-white text-black border-black"
               }`}
             >
@@ -660,7 +660,7 @@ function HomeContent() {
                       <body>${selectedEmail.html_body || selectedEmail.text_body}</body>
                     </html>
                   `}
-                  className="w-full h-full border-0 min-h-[350px]"
+                  className="w-full h-full border-0 min-h-[450px]"
                   title="Email Content"
                 />
               ) : (
