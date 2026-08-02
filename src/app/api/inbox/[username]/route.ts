@@ -13,7 +13,8 @@ export async function GET(
       .from("emails")
       .select("id, recipient, username, sender, subject, text_body, html_body, created_at, expires_at")
       .eq("username", cleanUsername)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error("[API Error] Failed to fetch emails:", error.message);

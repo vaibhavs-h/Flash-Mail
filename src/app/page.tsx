@@ -131,7 +131,8 @@ function HomeContent() {
         .from("emails")
         .select("*")
         .eq("username", targetUsername.toLowerCase())
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (!error && data) {
         setEmails((prev) => {
