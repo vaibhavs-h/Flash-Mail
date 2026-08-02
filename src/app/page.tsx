@@ -119,7 +119,7 @@ function HomeContent() {
     };
   }, [isDarkMode]);
 
-  // Fetch emails directly from Supabase (Bypasses Vercel Serverless Function Invocations)
+  // Fetch emails from API route (uses Service Role Key to bypass RLS securely)
   const fetchEmails = async (targetUsername: string, isSilent = false) => {
     if (!targetUsername) {
       setEmails([]);
@@ -127,30 +127,25 @@ function HomeContent() {
     }
     if (!isSilent) setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("emails")
-        .select("*")
-        .eq("username", targetUsername.toLowerCase())
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (!error && data) {
+      const res = await fetch(`/api/inbox/${targetUsername}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.emails)) {
         setEmails((prev) => {
-          if (isSilent && data.length > prev.length) {
+          if (isSilent && json.emails.length > prev.length) {
             setNewEmailAlert(true);
             setTimeout(() => setNewEmailAlert(false), 5000);
           }
-          return data as EmailItem[];
+          return json.emails;
         });
       }
     } catch (err) {
-      console.error("Supabase Direct Fetch Exception:", err);
+      console.error("Fetch Inbox Exception:", err);
     } finally {
       if (!isSilent) setLoading(false);
     }
   };
 
-  // Listen for realtime emails with Tab Visibility pause + smart polling fallback
+  // Listen for realtime emails with Tab Visibility pause + 8s polling fallback
   useEffect(() => {
     if (!username) {
       setEmails([]);
@@ -160,7 +155,7 @@ function HomeContent() {
 
     fetchEmails(username);
 
-    // 1. Supabase Realtime Subscription
+    // 1. Supabase Realtime Subscription (0ms instant updates)
     const channel = supabase
       .channel(`inbox-${username}`)
       .on(
@@ -185,16 +180,12 @@ function HomeContent() {
         setRealtimeConnected(status === "SUBSCRIBED");
       });
 
-    // 2. Tab Visibility & WebSocket Check (ONLY polls if WebSockets disconnect!)
+    // 2. Tab Visibility Check & Smart Polling (Pauses when user leaves tab!)
     const pollInterval = setInterval(() => {
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible" &&
-        !realtimeConnected
-      ) {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
         fetchEmails(username, true);
       }
-    }, 10000);
+    }, 8000);
 
     return () => {
       supabase.removeChannel(channel);
