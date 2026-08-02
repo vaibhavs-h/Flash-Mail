@@ -28,6 +28,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Developer Scripts
+/scripts/
+
 # Operating System Files
 .DS_Store
 *.pem

@@ -14,6 +14,8 @@ import {
   X,
   Sparkles,
   ArrowRight,
+  Star,
+  Github,
 } from "lucide-react";
 
 interface EmailItem {
@@ -246,9 +248,23 @@ function HomeContent() {
           </h1>
 
           <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/vaibhavs-h/Flash-Mail"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`font-black px-4 py-2.5 text-base sm:text-xl border-4 uppercase cursor-pointer transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-2.5 ${
+                isDarkMode
+                  ? "bg-[#18181b] text-white border-white shadow-[4px_4px_0px_#ffffff] hover:bg-white hover:text-black hover:shadow-[7px_7px_0px_#ffffff] active:shadow-[1px_1px_0px_#ffffff]"
+                  : "bg-[#24292e] text-white border-black shadow-[4px_4px_0px_#000000] hover:bg-black hover:text-white hover:shadow-[7px_7px_0px_#000000] active:shadow-[1px_1px_0px_#000000]"
+              }`}
+            >
+              <Github className="w-6 h-6 fill-current" />
+              <span>GITHUB</span>
+            </a>
+
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`font-black px-6 py-2.5 text-xl border-4 uppercase cursor-pointer transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0.5 active:translate-y-0.5 ${
+              className={`font-black px-5 py-2.5 text-base sm:text-xl border-4 uppercase cursor-pointer transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 active:translate-x-0.5 active:translate-y-0.5 ${
                 isDarkMode
                   ? "bg-[#ff5a5f] text-black border-white shadow-[4px_4px_0px_#ffffff] hover:bg-white hover:text-[#ff5a5f] hover:shadow-[7px_7px_0px_#ffffff] active:shadow-[1px_1px_0px_#ffffff]"
                   : "bg-[#ff5a5f] text-white border-black shadow-[4px_4px_0px_#000000] hover:bg-black hover:text-[#ff5a5f] hover:shadow-[7px_7px_0px_#000000] active:shadow-[1px_1px_0px_#000000]"
@@ -589,17 +605,19 @@ function HomeContent() {
                 PLAIN TEXT
               </button>
 
-              <button
-                onClick={() => handleDeleteEmail(selectedEmail.id)}
-                className={`ml-auto px-4 py-2 font-black text-sm border-4 cursor-pointer transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 flex items-center gap-1.5 ${
+              <a
+                href="https://github.com/vaibhavs-h/Flash-Mail"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`ml-auto px-4 py-2 font-black text-sm border-4 cursor-pointer transition-all duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 flex items-center gap-2 ${
                   isDarkMode
-                    ? "bg-rose-600 text-white border-white shadow-[3px_3px_0px_#ffffff]"
-                    : "bg-rose-600 text-white border-black shadow-[3px_3px_0px_#000000]"
+                    ? "bg-black text-white border-white shadow-[3px_3px_0px_#ffffff] hover:bg-white hover:text-black"
+                    : "bg-black text-white border-black shadow-[3px_3px_0px_#000000] hover:bg-white hover:text-black"
                 }`}
               >
-                <Trash2 className="w-4 h-4" />
-                DELETE
-              </button>
+                <Github className="w-4 h-4 fill-current" />
+                <span>STAR ON GITHUB</span>
+              </a>
             </div>
 
             {/* EMAIL CONTENT DISPLAY */}
