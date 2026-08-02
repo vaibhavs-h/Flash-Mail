@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import WebSocket from "ws";
+
+if (typeof globalThis.WebSocket === "undefined") {
+  // Polyfill WebSocket for Node.js environments < 22
+  (globalThis as unknown as { WebSocket: typeof WebSocket }).WebSocket = WebSocket;
+}
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
