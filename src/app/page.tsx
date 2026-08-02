@@ -185,12 +185,16 @@ function HomeContent() {
         setRealtimeConnected(status === "SUBSCRIBED");
       });
 
-    // 2. Tab Visibility Check & Smart Polling (Pauses when user leaves tab)
+    // 2. Tab Visibility & WebSocket Check (ONLY polls if WebSockets disconnect!)
     const pollInterval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !realtimeConnected
+      ) {
         fetchEmails(username, true);
       }
-    }, 4000);
+    }, 10000);
 
     return () => {
       supabase.removeChannel(channel);
