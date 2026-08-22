@@ -1,0 +1,160 @@
+service: flashmail-serverless
+
+frameworkVersion: "3"
+
+useDotenv: true
+
+plugins:
+  - serverless-esbuild
+  - serverless-dotenv-plugin
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    exclude:
+      - "@aws-sdk/*" # provided by the Lambda Node20 runtime
+
+  # --- Phase 0 pre-flight results go here — do NOT deploy with placeholders left in. ---
+  #
+  # region: set from the mandatory Phase 0.1 check (which regions currently support
+  # SES *inbound receiving*, not just sending — this is a strict subset of all AWS
+  # regions and is NOT the same as wherever the EC2 daemon or Supabase happen to
+  # live). No default is provided on purpose, so an un-set deploy fails loudly
+  # instead of silently deploying to a guessed region.
+  region: ${param:region}
+
+  # createRuleSet: set from the mandatory Phase 0.2 check
+  # (`aws ses describe-active-receipt-rule-set --region <region>`).
+  #   true  -> no active rule set exists; this stack creates flashmail-rule-set (you
+  #            must still manually run `aws ses set-active-receipt-rule-set` once
+  #            after first deploy — CloudFormation cannot activate a rule set).
+  #   false -> a rule set is already active; this stack adds only its ReceiptRule to
+  #            that existing named set (existingRuleSetName below), leaving every
+  #            other rule in it untouched.
+  createRuleSet: ${param:createRuleSet, 'true'}
+  existingRuleSetName: ${param:existingRuleSetName, ''}
+
+  # sesRecipients: which recipient condition(s) the ReceiptRule matches.
+  #   Case A (migration only):        flash-mail.vaibhav.rs
+  #   Case B (+ random subdomains):   vaibhav.rs   (apex — pending live confirmation
+  #     that a domain-level SES recipient condition actually matches subdomains; see
+  #     the plan's "SES receipt-rule scope: Case A vs. Case B" section and the
+  #     Case-B end-to-end test in Cutover step 17 before trusting this in
+  #     production)
+  # This deployment is configured for Case B per the current decision.
+  sesRecipients: ${param:sesRecipients, 'vaibhav.rs'}
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${self:custom.region}
+  stage: ${opt:stage, 'prod'}
+  memorySize: 256
+  timeout: 30
+  logRetentionInDays: 30
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - !GetAtt SmtpReceiverDLQ.Arn
+
+functions:
+  smtpReceiver:
+    handler: src/handlers/smtpReceiver.handler
+    description: SES-in-SNS -> parse MIME -> upsert into Supabase emails table
+    environment:
+      SUPABASE_URL: ${env:SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${ssm:/flashmail/${self:provider.stage}/supabase-service-role-key}
+      NEXT_PUBLIC_DOMAIN: ${env:NEXT_PUBLIC_DOMAIN, 'flash-mail.vaibhav.rs'}
+    events:
+      - sns:
+          arn: !Ref SesInboundTopic
+          topicName: flashmail-ses-inbound
+    destinations:
+      onFailure: !GetAtt SmtpReceiverDLQ.Arn
+
+  cleaner:
+    handler: src/handlers/cleaner.handler
+    description: Hourly purge of expired rows from the Supabase emails table
+    environment:
+      SUPABASE_URL: ${env:SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${ssm:/flashmail/${self:provider.stage}/supabase-service-role-key}
+    events:
+      - schedule:
+          rate: rate(1 hour)
+          enabled: true
+
+resources:
+  Conditions:
+    ShouldCreateRuleSet: !Equals ["${self:custom.createRuleSet}", "true"]
+
+  Resources:
+    SesInboundTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: flashmail-ses-inbound
+
+    SesInboundTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        Topics:
+          - !Ref SesInboundTopic
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: AllowSESPublish
+              Effect: Allow
+              Principal:
+                Service: ses.amazonaws.com
+              Action: sns:Publish
+              Resource: !Ref SesInboundTopic
+              Condition:
+                StringEquals:
+                  AWS:SourceAccount: !Ref AWS::AccountId
+
+    SmtpReceiverDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: flashmail-smtp-receiver-dlq
+        MessageRetentionPeriod: 1209600 # 14 days, max — plenty of time to notice + replay
+
+    FlashmailRuleSet:
+      Type: AWS::SES::ReceiptRuleSet
+      Condition: ShouldCreateRuleSet
+      Properties:
+        RuleSetName: flashmail-rule-set
+
+    FlashmailReceiptRule:
+      Type: AWS::SES::ReceiptRule
+      DependsOn:
+        - SesInboundTopicPolicy
+      Properties:
+        RuleSetName: !If
+          - ShouldCreateRuleSet
+          - !Ref FlashmailRuleSet
+          - ${self:custom.existingRuleSetName}
+        Rule:
+          Name: flashmail-inbound
+          Enabled: true
+          ScanEnabled: true
+          Recipients:
+            - ${self:custom.sesRecipients}
+          Actions:
+            - SNSAction:
+                TopicArn: !Ref SesInboundTopic
+                Encoding: Base64
+
+  Outputs:
+    SesInboundTopicArn:
+      Value: !Ref SesInboundTopic
+    SmtpReceiverDLQUrl:
+      Value: !Ref SmtpReceiverDLQ
+    SmtpReceiverDLQArn:
+      Value: !GetAtt SmtpReceiverDLQ.Arn

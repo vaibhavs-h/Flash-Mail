@@ -9,7 +9,11 @@
     "lint": "next lint",
     "smtp": "tsx server/smtp-daemon.ts",
     "cleaner": "tsx server/cleaner.ts",
-    "test:smtp": "tsx scripts/test-smtp.ts"
+    "test:smtp": "tsx scripts/test-smtp.ts",
+    "typecheck": "tsc --noEmit",
+    "serverless:test": "tsx serverless/test/smtpReceiver.test.ts",
+    "serverless:deploy": "cd serverless && npx sls deploy",
+    "serverless:remove": "cd serverless && npx sls remove"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -32,6 +36,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.9",
+    "@types/aws-lambda": "^8.10.162",
     "@types/dompurify": "^3.2.0",
     "@types/jsdom": "^21.1.7",
     "@types/mailparser": "^3.4.5",
@@ -40,8 +45,12 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "esbuild": "^0.28.2",
     "nodemailer": "^6.10.0",
     "postcss": "^8.5.2",
+    "serverless": "^3.40.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-esbuild": "^1.57.2",
     "tailwindcss": "^4.0.9",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"

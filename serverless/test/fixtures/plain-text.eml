@@ -1,0 +1,11 @@
+From: Test Sender <sender@example.com>
+To: testuser@flash-mail.vaibhav.rs
+Subject: Plain text test email
+Date: Mon, 01 Jan 2024 12:00:00 +0000
+Message-ID: <plain-text-fixture@example.com>
+Content-Type: text/plain; charset=utf-8
+MIME-Version: 1.0
+
+This is a plain text test email body.
+
+It has multiple lines to make sure text parsing works correctly.

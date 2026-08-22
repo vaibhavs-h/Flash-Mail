@@ -31,7 +31,20 @@ interface EmailItem {
   expires_at: string;
 }
 
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhav.rs";
+const ROOT_DOMAIN = "vaibhav.rs";
+
+// Deterministic per-username subdomain (FNV-1a, truncated) — same username always
+// reproduces the same subdomain, so an address handed out still matches on return.
+// Different usernames scatter across a large hash space, spreading exposure to
+// third-party disposable-email blocklists instead of concentrating it on one domain.
+function hashSubdomain(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0").slice(0, 6);
+}
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -61,7 +74,8 @@ function HomeContent() {
     setInputVal(clean);
   }, [searchParams]);
 
-  const fullEmail = username ? `${username}@${DOMAIN}` : "";
+  const subdomain = username ? hashSubdomain(username) : "";
+  const fullEmail = username ? `${username}@${subdomain}.${ROOT_DOMAIN}` : "";
 
   // Floating dots background canvas
   useEffect(() => {
@@ -332,7 +346,7 @@ function HomeContent() {
                     className={`hidden sm:inline absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm sm:text-base font-bold pointer-events-none ${isDarkMode ? "text-slate-400" : "text-slate-600"
                       }`}
                   >
-                    @{DOMAIN}
+                    @{ROOT_DOMAIN}
                   </span>
                 </div>
 

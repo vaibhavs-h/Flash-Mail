@@ -21,8 +21,19 @@ const server = new SMTPServer({
   disabledCommands: ["AUTH"],
   authOptional: true,
 
-  // Accept all incoming recipients
+  // Only accept recipients on our own domain/subdomains — accepting anything
+  // else makes this server look like an open relay to internet-wide spam probes
   onRcptTo(address, session, callback) {
+    const recipientDomain = address.address.split("@")[1]?.toLowerCase() || "";
+    const isOurs = recipientDomain === "vaibhav.rs" || recipientDomain.endsWith(".vaibhav.rs");
+
+    if (!isOurs) {
+      console.warn(`[SMTP] Rejected relay probe to non-local recipient: ${address.address}`);
+      const err = new Error("550 No such user here") as Error & { responseCode: number };
+      err.responseCode = 550;
+      return callback(err);
+    }
+
     console.log(`[SMTP] Inbound recipient target: ${address.address}`);
     return callback();
   },
@@ -61,7 +72,7 @@ const server = new SMTPServer({
           .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
           .join("\n");
 
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         console.log(`\n========================================`);
         console.log(`📧 [NEW INCOMING EMAIL]`);

@@ -20,6 +20,9 @@
 # Vercel deployment cache
 .vercel
 
+# Serverless Framework build/deploy artifacts (serverless/)
+.serverless
+
 # Logs
 logs
 *.log

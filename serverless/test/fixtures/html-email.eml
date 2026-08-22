@@ -1,0 +1,14 @@
+From: Test Sender <sender@example.com>
+To: testuser@flash-mail.vaibhav.rs
+Subject: HTML test email
+Date: Mon, 01 Jan 2024 12:00:00 +0000
+Message-ID: <html-fixture@example.com>
+Content-Type: text/html; charset=utf-8
+MIME-Version: 1.0
+
+<html>
+  <body>
+    <p>This is an <strong>HTML</strong> test email body.</p>
+    <p>It has multiple elements to make sure HTML parsing works correctly.</p>
+  </body>
+</html>
