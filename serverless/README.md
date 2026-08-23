@@ -1,15 +1,15 @@
 # Flash Mail — serverless inbound mail receiving
 
-Replaces the EC2 SMTP daemon (`server/smtp-daemon.ts`) and cleaner
-(`server/cleaner.ts`) with:
+Live architecture, replacing the old EC2 SMTP daemon and cleaner entirely (EC2 has
+been decommissioned — there is no fallback path anymore):
 
 ```
-SES (inbound-smtp.<region>.amazonaws.com)
-  -> receipt rule (recipients: vaibhav.rs apex — Case B, see below)
-  -> SNS topic
+SES (inbound-smtp.ap-southeast-2.amazonaws.com)
+  -> receipt rule "flashmail-inbound" (no recipient condition — matches every
+     address under the verified vaibhav.rs identity: the apex and every subdomain)
+  -> SNS topic (flashmail-ses-inbound)
   -> Lambda: smtpReceiver -> Supabase emails table (upsert on message_id)
                            -> on repeated failure -> SQS DLQ
-
 EventBridge (rate(1 hour))
   -> Lambda: cleaner -> Supabase emails table (delete expired)
 ```
@@ -18,40 +18,39 @@ Deps and tooling live in the **repo root** `package.json`/`node_modules` — the
 no separate `serverless/package.json`. Run every command below from the repo root
 unless noted otherwise.
 
-## Before you deploy — mandatory pre-flight checks
+Region: **ap-southeast-2**, confirmed to support SES inbound receiving (not every
+region does, and it's unrelated to where Supabase or any other infra happens to
+live). Rule set: **`flashmail-rule-set`**, created and activated by this deployment
+(no pre-existing rule set was found in this account).
 
-These are not optional. Deploying without them risks disrupting unrelated mail flows
-or deploying to a region that doesn't support SES inbound receiving at all.
+## The recipient-matching fix — read this before touching the rule
 
-1. **Region**: confirm which AWS region currently supports SES *inbound receiving*
-   (a strict subset of all regions — not the same list as SES sending, and not
-   necessarily wherever your EC2 instance or Supabase project happen to live).
-   Check AWS's current SES "Regions and endpoints" documentation, or:
-   ```
-   aws ses describe-receipt-rule-set --region <candidate-region> 2>&1
-   ```
-   A region that doesn't support receiving will error clearly here.
-2. **Active receipt rule set** — run in your chosen region:
-   ```
-   aws ses describe-active-receipt-rule-set --region <region>
-   ```
-   - **No active rule set** → deploy with `createRuleSet=true` (default). After the
-     first deploy, you must manually run (CloudFormation cannot do this step):
-     ```
-     aws ses set-active-receipt-rule-set --region <region> --rule-set-name flashmail-rule-set
-     ```
-   - **A rule set is already active** → deploy with `createRuleSet=false` and
-     `existingRuleSetName=<that name>`. This adds only Flash Mail's rule to it,
-     leaving every other rule in that set untouched.
-3. **Isolation check (Case B only — see below)**: confirm `vaibhav.rs` or any of its
-   other subdomains don't already carry unrelated mail you'd be capturing by
-   verifying the apex domain.
+The single most important non-obvious thing in this setup: **do not set the
+`ReceiptRule`'s `Recipients` to a domain string expecting it to cover subdomains —
+it doesn't.**
 
-## Deploy
+An earlier version of this config set `Recipients: ["vaibhav.rs"]`, expecting that
+to match subdomain addresses like `test@x9k2m7.vaibhav.rs` too. It doesn't — SES
+matches an explicit recipient condition as an *exact* address or exact domain only.
+Confirmed by live testing: a real email to a random subdomain got a hard
+`550 5.1.1 Requested action not taken: mailbox unavailable` bounce with that config,
+proving SES rejected it during the SMTP transaction itself, before ever reaching
+Lambda.
+
+The fix, per the `ReceiptRule` API's own docs ("If this field is not specified,
+this rule matches all recipients on all verified domains"): **omit `Recipients`
+entirely.** Since `vaibhav.rs` is the only verified identity in this account, an
+unconditional rule is exactly the right scope — it covers `flash-mail.vaibhav.rs`
+and every generated `username@<hash>.vaibhav.rs` address, with nothing else to
+accidentally capture. Confirmed working end-to-end with a real Gmail send after
+making this change. This is what `serverless.yml`'s `FlashmailReceiptRule` resource
+currently does — don't add a `Recipients` property back without re-testing live.
+
+## Deploy / redeploy
 
 ```bash
 cd serverless
-cp .env.example .env   # fill in SUPABASE_URL, NEXT_PUBLIC_DOMAIN
+cp .env.example .env   # fill in SUPABASE_URL
 cd ..
 
 # One-time: put the Supabase service-role key in SSM (never in .env — it's the
@@ -60,24 +59,74 @@ aws ssm put-parameter \
   --name /flashmail/prod/supabase-service-role-key \
   --type SecureString \
   --value "<your supabase service role key>" \
-  --region <region>
+  --region ap-southeast-2
 
 npm run serverless:deploy -- \
-  --param="region=<region>" \
-  --param="createRuleSet=true|false" \
-  --param="existingRuleSetName=<name if createRuleSet=false>" \
-  --param="sesRecipients=vaibhav.rs"
+  --param="region=ap-southeast-2" \
+  --param="createRuleSet=true"
 ```
 
-`sesRecipients` implements the plan's Case A/B split:
+If redeploying into a fresh AWS account (disaster recovery, moving accounts), check
+first whether a receipt rule set is already active before assuming
+`createRuleSet=true`:
 
-- **Case A** (migration only, no random subdomains): `sesRecipients=flash-mail.vaibhav.rs`
-- **Case B** (+ random-subdomain addresses, current decision): `sesRecipients=vaibhav.rs`
-  — verifying the apex instead of the fixed subdomain. **This is only correct if SES's
-  domain-level recipient matching actually covers subdomains, which is unconfirmed.**
-  Before trusting this in production, run the Case B end-to-end test below. If it
-  fails, fall back to Case A (`flash-mail.vaibhav.rs`) for this rule and keep
-  random-subdomain receiving on the EC2 daemon for now — do not force a workaround.
+```bash
+aws ses describe-active-receipt-rule-set --region ap-southeast-2
+```
+
+No active set → `createRuleSet=true` (creates `flashmail-rule-set`, then you must
+manually activate it — CloudFormation can't do this step):
+
+```bash
+aws ses set-active-receipt-rule-set --region ap-southeast-2 --rule-set-name flashmail-rule-set
+```
+
+An active set already exists → `createRuleSet=false` and add
+`--param="existingRuleSetName=<that name>"`, so this only adds Flash Mail's rule to
+it without touching any other rules already there.
+
+## IAM permissions the deploying user needs
+
+Pieced together from real deploy failures, not guessed upfront — attach all of
+these to whatever IAM user runs `serverless:deploy`:
+
+- `AmazonSESFullAccess`, `AmazonSNSFullAccess`, `AWSLambda_FullAccess`,
+  `AmazonSQSFullAccess`, `AmazonSSMFullAccess`, `AWSCloudFormationFullAccess`,
+  `IAMFullAccess` — the core resources this stack creates.
+- `AmazonS3FullAccess` — missed initially; Serverless Framework auto-creates an S3
+  bucket to hold deployment artifacts (packaged Lambda code, templates).
+- `AmazonEventBridgeFullAccess` — missed initially; the `cleaner` function's hourly
+  `schedule` event creates an `AWS::Events::Rule`, which needs its own permissions
+  separate from Lambda's.
+- `CloudWatchLogsFullAccess` — needed for the `logRetentionInDays` config to manage
+  log group retention.
+
+## Known gotchas (from real deployment experience, not theoretical)
+
+- **WebSocket polyfill required**, even though neither Lambda uses Realtime.
+  `@supabase/supabase-js`'s `createClient()` unconditionally constructs a Realtime
+  client at construction time, which throws `Node.js detected but native WebSocket
+  not found` on the `nodejs20.x` runtime (native WebSocket landed in Node 22). Fixed
+  in `src/lib/supabaseAdmin.ts` with the same `ws` polyfill pattern the old EC2
+  daemon used — don't remove it.
+- **AWS's own "Amazon SES Setup Notification"** fires once, automatically, the
+  first time this SNS topic is configured as a receipt rule action (and will fire
+  again on any future from-scratch stack recreation). Its `content` field is plain
+  text, not base64-encoded like real notifications, which corrupts if decoded as
+  base64. Handled in `smtpReceiver.ts` by checking for
+  `mail.messageId === "AMAZON_SES_SETUP_NOTIFICATION"` and skipping it — not a real
+  email, don't remove this guard.
+- **`destinations.onFailure` needs the `{ type, arn }` object shape**, not a bare
+  `!GetAtt` reference, when pointing at a CloudFormation-managed resource — the
+  bare form fails schema validation at `sls deploy` time with a confusing
+  "unrecognized property" error.
+- **`sls invoke` needs the same `--param` flags as `sls deploy`** (region, etc.) —
+  they don't carry over from a previous deploy, since `serverless.yml` reads them
+  from custom params, not the standard `--region` CLI flag.
+- **A failed first deploy attempt can leave the CloudFormation stack in
+  `ROLLBACK_COMPLETE`**, which blocks any further deploy until it's explicitly
+  deleted (`aws cloudformation delete-stack` + `aws cloudformation
+  wait stack-delete-complete`) — safe to do if nothing in it ever succeeded.
 
 ## Testing
 
@@ -87,22 +136,15 @@ npm run serverless:test  # unit tests: fixtures, oversized-email skip, recipient
                           # precedence, and the duplicate-delivery/message_id test
 ```
 
-After `sls deploy`, before touching DNS:
+Smoke test either Lambda directly:
 
 ```bash
 cd serverless
-npx sls invoke -f cleaner
-npx sls invoke -f smtpReceiver --data '<mock SNS event JSON>'
+npx sls invoke -f cleaner --param="region=ap-southeast-2" --param="createRuleSet=true"
+npx sls invoke -f smtpReceiver --path /path/to/mock-event.json --param="region=ap-southeast-2" --param="createRuleSet=true"
 ```
 
-Check CloudWatch Logs for both. Confirm a real Supabase row was written by the
-`smtpReceiver` invoke.
-
-**Case B end-to-end test (do this before switching the live MX)**: via a secondary/
-test MX setup, send a real email to `<random>.vaibhav.rs` (not just
-`flash-mail.vaibhav.rs`) and confirm the receipt rule actually catches it. This is
-the concrete test that resolves the subdomain-matching uncertainty above — trust the
-test result, not the assumption.
+Check CloudWatch Logs and confirm a real Supabase row was written.
 
 ## DLQ — inspecting and reprocessing failed deliveries
 
@@ -111,11 +153,11 @@ are exhausted — this means Supabase genuinely failed (not a duplicate; duplica
 absorbed by the `message_id` upsert).
 
 ```bash
-aws sqs receive-message --queue-url <SmtpReceiverDLQUrl from stack outputs> --region <region>
+aws sqs receive-message --queue-url <SmtpReceiverDLQUrl from stack outputs> --region ap-southeast-2
 ```
 
-Each message body wraps the original failed SNS event under `requestPayload`. Once
-the underlying issue (e.g. a Supabase outage) is resolved, reprocess by extracting
+Each message body wraps the original failed invocation payload under
+`requestPayload`. Once the underlying issue is resolved, reprocess by extracting
 that payload and re-invoking:
 
 ```bash
@@ -127,14 +169,5 @@ npx sls invoke -f smtpReceiver --data '<extracted requestPayload>'
 - **Oversized emails (>~150KB) are dropped, not queued.** SES's SNS action inlines
   the raw MIME content only up to ~150KB; above that, `content` is absent from the
   notification and `smtpReceiver` logs a warning and skips — there is no S3 fallback
-  in this deployment (S3 was considered and explicitly ruled out; see the plan). This
-  matches the existing app's behavior of not surfacing attachments.
-- **Case B's apex-covers-subdomains assumption is unconfirmed** until the end-to-end
-  test above actually passes against a live deployment.
-
-## Rollback
-
-The EC2 SMTP daemon (`server/smtp-daemon.ts`, still deployed via PM2 per
-`ecosystem.config.js`) is left running unmodified for 24–72h after the MX cutover.
-Reverting is a DNS change back to the EC2 IP — no redeploy needed. See the plan's
-Cutover sequence for the full ordered steps.
+  in this deployment. This matches the app's existing behavior of not surfacing
+  attachments.

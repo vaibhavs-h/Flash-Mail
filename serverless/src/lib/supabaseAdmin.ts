@@ -1,4 +1,16 @@
+import WebSocket from "ws";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+// @supabase/supabase-js's createClient() unconditionally constructs a Realtime
+// client (WebSocket transport) even when Realtime is never used — confirmed by
+// actually invoking this Lambda, which threw "Node.js detected but native
+// WebSocket not found" on the nodejs20.x runtime (native WebSocket landed in
+// Node 22). Neither handler here uses Realtime, but the constructor still checks
+// for a WebSocket implementation, so the polyfill is required regardless — same
+// fix as src/lib/supabase/server.ts uses for the same reason.
+if (typeof globalThis.WebSocket === "undefined") {
+  (globalThis as unknown as { WebSocket: typeof WebSocket }).WebSocket = WebSocket;
+}
 
 // Deliberately not a re-export of ../../src/lib/supabase/server.ts — that file does
 // CWD-relative dotenv.config() loading and has Next-build-time placeholder

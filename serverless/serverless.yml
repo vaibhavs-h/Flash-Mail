@@ -38,15 +38,17 @@ custom:
   createRuleSet: ${param:createRuleSet, 'true'}
   existingRuleSetName: ${param:existingRuleSetName, ''}
 
-  # sesRecipients: which recipient condition(s) the ReceiptRule matches.
-  #   Case A (migration only):        flash-mail.vaibhav.rs
-  #   Case B (+ random subdomains):   vaibhav.rs   (apex — pending live confirmation
-  #     that a domain-level SES recipient condition actually matches subdomains; see
-  #     the plan's "SES receipt-rule scope: Case A vs. Case B" section and the
-  #     Case-B end-to-end test in Cutover step 17 before trusting this in
-  #     production)
-  # This deployment is configured for Case B per the current decision.
-  sesRecipients: ${param:sesRecipients, 'vaibhav.rs'}
+  # Recipient scope: deliberately NO recipient condition on the ReceiptRule (see
+  # FlashmailReceiptRule below) rather than Recipients: ["vaibhav.rs"]. Confirmed by
+  # live end-to-end testing, not assumed: a receipt rule with an explicit bare-domain
+  # recipient condition matches ONLY that exact domain, not its subdomains — a real
+  # Gmail send to a random subdomain got a hard 550 5.1.1 bounce with that config.
+  # Per the ReceiptRule API docs, omitting Recipients entirely makes the rule "match
+  # all recipients on all verified domains" — which does include every subdomain,
+  # confirmed by the same test succeeding once this was changed. Since vaibhav.rs is
+  # the only verified identity in this account, an unconditional rule is exactly the
+  # scope we want: flash-mail.vaibhav.rs and every generated username@<hash>.vaibhav.rs
+  # address, with nothing else to accidentally capture.
 
 provider:
   name: aws
@@ -78,7 +80,9 @@ functions:
           arn: !Ref SesInboundTopic
           topicName: flashmail-ses-inbound
     destinations:
-      onFailure: !GetAtt SmtpReceiverDLQ.Arn
+      onFailure:
+        type: sqs
+        arn: !GetAtt SmtpReceiverDLQ.Arn
 
   cleaner:
     handler: src/handlers/cleaner.handler
@@ -144,8 +148,6 @@ resources:
           Name: flashmail-inbound
           Enabled: true
           ScanEnabled: true
-          Recipients:
-            - ${self:custom.sesRecipients}
           Actions:
             - SNSAction:
                 TopicArn: !Ref SesInboundTopic

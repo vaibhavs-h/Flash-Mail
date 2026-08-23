@@ -21,23 +21,24 @@ A self-hosted Temporary Email Service. Create disposable email addresses instant
 - **Real-Time Live Sync**: Inbound emails arrive instantly without page refreshing
 - **Neubrutalist Interface**: Clean, vibrant, and intuitive user experience
 
-## 📧 SMTP Server Details
+## 📧 Email Receiving
 
-- **Server Address:** `flash-mail.vaibhav.rs`
-- **Email Format:** `your-username@flash-mail.vaibhav.rs`
-- All emails sent to `{username}@flash-mail.vaibhav.rs` will be automatically handled
+- **Email Format:** `your-username@<random>.vaibhav.rs` — each generated address gets
+  its own subdomain, deterministically derived from the username
+- Inbound mail is received via AWS SES → SNS → Lambda (see `serverless/`), not a
+  self-hosted SMTP server
 
 ## 🚀 Quick Start
 
 1. Visit [flash-mail.vaibhav.rs](https://flash-mail.vaibhav.rs)
 2. Choose your username
 > ⚠️ **Security Note:** Your username is public. Do not use it for confidential communications.
-3. Start using your temporary email: `{username}@flash-mail.vaibhav.rs`
+3. Start using your temporary email address as shown on the site
 
 ## ⚠️ Limitations
 
 - Attachments are not displayed in the hosted version.
-- Email will be removed after 7 days from the database.
+- Email will be removed after 30 days from the database.
 
 ## 🤝 Contributing
 

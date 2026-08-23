@@ -17,6 +17,17 @@ export async function processSNSEvent(
     const notification: SesReceiptNotification = JSON.parse(record.Sns.Message);
     const { content, mail, receipt } = notification;
 
+    if (mail.messageId === "AMAZON_SES_SETUP_NOTIFICATION") {
+      // AWS's own one-time confirmation message, sent automatically the first time
+      // this SNS topic is configured as a receipt rule action (fires again on any
+      // future from-scratch stack recreation). Its `content` field is plain text,
+      // not base64 like real notifications — decoding it as base64 corrupts it and
+      // eventually throws deep in mailparser/JSON handling. Not a real email, safe
+      // to skip outright.
+      console.log("[smtpReceiver] Skipping AWS's own SES setup notification.");
+      continue;
+    }
+
     if (!content) {
       // Oversized email (exceeded the ~150KB inline-content cap): nothing about a
       // retry fixes this, so log clearly and skip instead of throwing.
