@@ -365,20 +365,20 @@ function HomeContent() {
 
             {/* RULES CONTAINER */}
             <div
-              className={`border-4 p-4 sm:p-6 mb-8 text-center transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
+              className={`border-4 p-4 sm:p-6 mb-6 text-center transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
                   ? "bg-[#18181b] border-white shadow-[8px_8px_0px_#ffffff] hover:shadow-[12px_12px_0px_#ffffff]"
                   : "bg-[#e5e5e5] border-black shadow-[8px_8px_0px_#000000] hover:shadow-[12px_12px_0px_#000000]"
                 }`}
             >
-              <h2 className="text-3xl sm:text-4xl font-black uppercase mb-6">Temp Mail Service</h2>
-              <div className="space-y-4 text-left font-bold text-base sm:text-xl md:text-2xl leading-relaxed">
+              <h2 className="text-3xl sm:text-4xl font-black uppercase mb-5">Temp Mail Service</h2>
+              <div className="space-y-3 text-left font-bold text-base sm:text-xl md:text-2xl leading-snug">
                 <p
                   className={`p-4 border-4 transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
                       ? "bg-[#27272a] border-white shadow-[4px_4px_0px_#ffffff] hover:shadow-[7px_7px_0px_#ffffff]"
                       : "bg-white border-black shadow-[4px_4px_0px_#000000] hover:shadow-[7px_7px_0px_#000000]"
                     }`}
                 >
-                  1) Inbound emails are delivered instantly using real-time WebSockets — no manual refreshing required.
+                  1) Every address gets its own auto-generated subdomain, so this service can&#x27;t get blocklisted the way single-domain temp mail sites do — a more reliable disposable email.
                 </p>
                 <p
                   className={`p-4 border-4 transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
@@ -386,7 +386,7 @@ function HomeContent() {
                       : "bg-white border-black shadow-[4px_4px_0px_#000000] hover:shadow-[7px_7px_0px_#000000]"
                     }`}
                 >
-                  2) Use disposable emails for one-time signups, free trials, and untrusted sites to keep your primary inbox spam-free.
+                  2) Inbound emails typically arrive within seconds — no manual refreshing required.
                 </p>
                 <p
                   className={`p-4 border-4 transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
@@ -394,7 +394,7 @@ function HomeContent() {
                       : "bg-white border-black shadow-[4px_4px_0px_#000000] hover:shadow-[7px_7px_0px_#000000]"
                     }`}
                 >
-                  3) Messages auto-delete after 7 days so you don&#x27;t have to manage or clean up old emails.
+                  3) Messages auto-delete after 30 days so you don&#x27;t have to manage or clean up old emails.
                 </p>
               </div>
             </div>
