@@ -7,8 +7,7 @@ import type { SesReceiptNotification } from "../types/ses-notification";
 
 const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || "flash-mail.vaibhav.rs";
 
-// Core logic factored out from the Lambda entrypoint so tests can inject a fake
-// Supabase client instead of hitting a real network call.
+// Factored out from the handler so tests can inject a fake Supabase client.
 export async function processSNSEvent(
   event: SNSEvent,
   supabase: SupabaseClient
@@ -18,19 +17,13 @@ export async function processSNSEvent(
     const { content, mail, receipt } = notification;
 
     if (mail.messageId === "AMAZON_SES_SETUP_NOTIFICATION") {
-      // AWS's own one-time confirmation message, sent automatically the first time
-      // this SNS topic is configured as a receipt rule action (fires again on any
-      // future from-scratch stack recreation). Its `content` field is plain text,
-      // not base64 like real notifications — decoding it as base64 corrupts it and
-      // eventually throws deep in mailparser/JSON handling. Not a real email, safe
-      // to skip outright.
+      // AWS's automatic one-time setup confirmation, not a real email — skip it.
       console.log("[smtpReceiver] Skipping AWS's own SES setup notification.");
       continue;
     }
 
     if (!content) {
-      // Oversized email (exceeded the ~150KB inline-content cap): nothing about a
-      // retry fixes this, so log clearly and skip instead of throwing.
+      // Email exceeded the ~150KB inline-content cap — drop and log, don't retry.
       console.warn(
         `[smtpReceiver] Oversized email dropped (no inline content) — ` +
           `messageId=${mail.messageId}. Emails over ~150KB are not currently ` +
@@ -42,8 +35,7 @@ export async function processSNSEvent(
     const rawMime = Buffer.from(content, "base64");
     const parsed = await simpleParser(rawMime);
 
-    // Envelope-first, MIME-header-fallback — same precedence as
-    // server/smtp-daemon.ts's onData handler.
+    // Envelope address first, MIME header only as fallback.
     const recipientRaw =
       receipt.recipients?.[0] ||
       mail.destination?.[0] ||
@@ -60,8 +52,7 @@ export async function processSNSEvent(
       .upsert(row, { onConflict: "message_id", ignoreDuplicates: true });
 
     if (error) {
-      // Real failure (not a duplicate — duplicates are absorbed by the upsert
-      // above). Throw so Lambda's async retries, then the DLQ, kick in.
+      // Real failure, not a duplicate — throw so Lambda retries, then the DLQ.
       throw new Error(`[smtpReceiver] Supabase upsert failed: ${error.message}`);
     }
 

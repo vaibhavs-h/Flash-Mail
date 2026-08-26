@@ -18,37 +18,18 @@ custom:
     exclude:
       - "@aws-sdk/*" # provided by the Lambda Node20 runtime
 
-  # --- Phase 0 pre-flight results go here — do NOT deploy with placeholders left in. ---
-  #
-  # region: set from the mandatory Phase 0.1 check (which regions currently support
-  # SES *inbound receiving*, not just sending — this is a strict subset of all AWS
-  # regions and is NOT the same as wherever the EC2 daemon or Supabase happen to
-  # live). No default is provided on purpose, so an un-set deploy fails loudly
-  # instead of silently deploying to a guessed region.
+  # SES inbound-receiving region — no default, so an un-set deploy fails loudly.
   region: ${param:region}
 
-  # createRuleSet: set from the mandatory Phase 0.2 check
-  # (`aws ses describe-active-receipt-rule-set --region <region>`).
-  #   true  -> no active rule set exists; this stack creates flashmail-rule-set (you
-  #            must still manually run `aws ses set-active-receipt-rule-set` once
-  #            after first deploy — CloudFormation cannot activate a rule set).
-  #   false -> a rule set is already active; this stack adds only its ReceiptRule to
-  #            that existing named set (existingRuleSetName below), leaving every
-  #            other rule in it untouched.
+  # true: no active rule set exists yet, this stack creates one (needs a one-time
+  # manual `aws ses set-active-receipt-rule-set` after first deploy).
+  # false: adds our rule to an already-active set (existingRuleSetName below).
   createRuleSet: ${param:createRuleSet, 'true'}
   existingRuleSetName: ${param:existingRuleSetName, ''}
 
-  # Recipient scope: deliberately NO recipient condition on the ReceiptRule (see
-  # FlashmailReceiptRule below) rather than Recipients: ["vaibhav.rs"]. Confirmed by
-  # live end-to-end testing, not assumed: a receipt rule with an explicit bare-domain
-  # recipient condition matches ONLY that exact domain, not its subdomains — a real
-  # Gmail send to a random subdomain got a hard 550 5.1.1 bounce with that config.
-  # Per the ReceiptRule API docs, omitting Recipients entirely makes the rule "match
-  # all recipients on all verified domains" — which does include every subdomain,
-  # confirmed by the same test succeeding once this was changed. Since vaibhav.rs is
-  # the only verified identity in this account, an unconditional rule is exactly the
-  # scope we want: flash-mail.vaibhav.rs and every generated username@<hash>.vaibhav.rs
-  # address, with nothing else to accidentally capture.
+  # No Recipients condition on the ReceiptRule below — a bare-domain condition only
+  # matches that exact domain, not subdomains (confirmed via live test), so omitting
+  # it is what makes every generated username@<hash>.vaibhav.rs address work.
 
 provider:
   name: aws
@@ -127,7 +108,7 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: flashmail-smtp-receiver-dlq
-        MessageRetentionPeriod: 1209600 # 14 days, max — plenty of time to notice + replay
+        MessageRetentionPeriod: 1209600 # 14 days
 
     FlashmailRuleSet:
       Type: AWS::SES::ReceiptRuleSet

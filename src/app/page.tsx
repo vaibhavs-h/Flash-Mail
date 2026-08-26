@@ -33,10 +33,8 @@ interface EmailItem {
 
 const ROOT_DOMAIN = "vaibhav.rs";
 
-// Deterministic per-username subdomain (FNV-1a, truncated) — same username always
-// reproduces the same subdomain, so an address handed out still matches on return.
-// Different usernames scatter across a large hash space, spreading exposure to
-// third-party disposable-email blocklists instead of concentrating it on one domain.
+// Deterministic per-username subdomain hash (FNV-1a) — same username always maps
+// to the same subdomain, scattering addresses to resist disposable-mail blocklists.
 function hashSubdomain(input: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
@@ -640,6 +638,7 @@ function HomeContent() {
                   `}
                   className="w-full h-full border-0 min-h-[450px]"
                   title="Email Content"
+                  sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
                 />
               ) : (
                 <pre className="font-mono text-sm whitespace-pre-wrap font-semibold">

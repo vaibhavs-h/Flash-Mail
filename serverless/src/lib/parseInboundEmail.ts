@@ -12,12 +12,7 @@ export interface EmailInsertRow {
   expires_at: string;
 }
 
-// Port of server/smtp-daemon.ts's onData subject/textBody/htmlBody/rawHeaders/
-// expiresAt derivation — unchanged except expiresAt (30 days, was 7) and the added
-// message_id (from SES's mail.messageId, absent in the original since the EC2
-// daemon has no equivalent field). recipient/sender are derived by the caller
-// (smtpReceiver.ts) via the envelope-first/header-fallback chain and passed in
-// already resolved, mirroring how the original code derives them before this point.
+// Builds the row to insert; recipient/sender are already resolved by the caller.
 export function buildEmailInsertRow(
   parsed: ParsedMail,
   recipient: string,

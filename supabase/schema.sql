@@ -1,8 +1,4 @@
--- Supabase Schema for Temp Mail Service (flash-mail.vaibhav.rs and *.vaibhav.rs)
---
--- This file is the fresh-install snapshot. For an already-live database, run the
--- idempotent migration in supabase/migrations/ instead — CREATE TABLE IF NOT EXISTS
--- does not retroactively alter an existing table.
+-- Supabase schema for Temp Mail Service (flash-mail.vaibhav.rs and *.vaibhav.rs)
 
 CREATE TABLE IF NOT EXISTS emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -18,14 +14,11 @@ CREATE TABLE IF NOT EXISTS emails (
   expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days')
 );
 
--- Indexing for high-performance inbox lookups and expiry cleanup
+-- Speeds up inbox lookups and expiry cleanup
 CREATE INDEX IF NOT EXISTS idx_emails_username ON emails(username);
 CREATE INDEX IF NOT EXISTS idx_emails_expires ON emails(expires_at);
 
--- message_id: from SES's mail.messageId, used by the Lambda smtpReceiver to dedupe
--- duplicate SNS deliveries via upsert(onConflict: "message_id"). NULL for rows
--- inserted by the EC2 SMTP daemon (which doesn't set it) — a plain UNIQUE constraint
--- allows unlimited NULLs in Postgres, so this doesn't collide with itself.
+-- Dedupes duplicate SNS deliveries via upsert(onConflict: "message_id")
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -35,5 +28,5 @@ BEGIN
   END IF;
 END $$;
 
--- Enable Supabase Realtime WebSockets on `emails` table
+-- Enable Supabase Realtime on the emails table
 ALTER PUBLICATION supabase_realtime ADD TABLE emails;

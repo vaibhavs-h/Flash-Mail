@@ -1,8 +1,7 @@
 import type { ScheduledHandler } from "aws-lambda";
 import { getSupabaseAdmin } from "../lib/supabaseAdmin";
 
-// Direct port of server/cleaner.ts's purgeExpiredEmails — unchanged logic, just
-// invoked once per EventBridge-scheduled run instead of via setInterval.
+// Runs once per EventBridge-scheduled invocation instead of a setInterval loop.
 export const handler: ScheduledHandler = async () => {
   const now = new Date().toISOString();
   console.log(`[cleaner] Checking for expired emails older than ${now}...`);

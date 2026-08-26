@@ -5,16 +5,12 @@ import type { SNSEvent } from "aws-lambda";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { processSNSEvent } from "../src/handlers/smtpReceiver";
 
-// No test framework exists elsewhere in this repo (root package.json's "test:smtp"
-// is a plain tsx script) — matching that convention here rather than introducing
-// jest/vitest for one test file. Run with: tsx test/smtpReceiver.test.ts
+// Plain tsx script, no test framework — run with: tsx test/smtpReceiver.test.ts
 
 const FIXTURES_DIR = path.join(__dirname, "fixtures");
 
-// --- Fake Supabase client: simulates just enough of `.from("emails").upsert(row,
-// { onConflict, ignoreDuplicates })` against an in-memory Map keyed by message_id,
-// mirroring the real UNIQUE(message_id) constraint's semantics (same key -> no
-// second row; NULL/undefined keys never collide with each other). ---
+// Fake Supabase client: upsert against an in-memory Map keyed by message_id,
+// mirroring the real UNIQUE(message_id) constraint's dedup behavior.
 function createFakeSupabase() {
   const rowsByMessageId = new Map<string, Record<string, unknown>>();
   const upsertCalls: Record<string, unknown>[] = [];
@@ -30,8 +26,7 @@ function createFakeSupabase() {
           upsertCalls.push(row);
           const key = row[opts.onConflict] as string | undefined;
           if (key && rowsByMessageId.has(key)) {
-            // Conflict on message_id + ignoreDuplicates: true -> DO NOTHING,
-            // exactly like the real UNIQUE constraint + upsert would.
+            // ignoreDuplicates: true -> DO NOTHING, like the real constraint.
             return { data: null, error: null };
           }
           if (key) rowsByMessageId.set(key, row);
@@ -205,14 +200,10 @@ test("duplicate SNS delivery: same mail.messageId delivered twice -> exactly one
     sender: "sender@example.com",
   });
 
-  // 1. First delivery.
+  // First delivery, then a simulated SNS redelivery of the same messageId.
   await processSNSEvent(event, client);
   assert.equal(rowsByMessageId.size, 1, "first delivery should write one row");
 
-  // 2. Second delivery of the SAME event (same mail.messageId) — simulates an SNS
-  //    redelivery/retry, which is exactly the scenario the message_id UNIQUE
-  //    constraint + upsert(onConflict: "message_id", ignoreDuplicates: true) exists
-  //    to guard against.
   await processSNSEvent(event, client);
 
   assert.equal(upsertCalls.length, 2, "both deliveries should reach the upsert call");
