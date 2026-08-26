@@ -384,7 +384,7 @@ function HomeContent() {
                       : "bg-white border-black shadow-[4px_4px_0px_#000000] hover:shadow-[7px_7px_0px_#000000]"
                     }`}
                 >
-                  2) Inbound emails typically arrive within seconds — no manual refreshing required.
+                  2) Inbound emails typically arrive within seconds — no manual refreshing required. If a link inside an email won&#x27;t open, right-click it and open in a new tab instead.
                 </p>
                 <p
                   className={`p-4 border-4 transition-all duration-150 hover:-translate-x-1 hover:-translate-y-1 ${isDarkMode
