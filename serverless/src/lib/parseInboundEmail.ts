@@ -29,7 +29,7 @@ export function buildEmailInsertRow(
     .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
     .join("\n");
 
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
   return {
     recipient,

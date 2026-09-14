@@ -38,7 +38,7 @@ A self-hosted Temporary Email Service. Create disposable email addresses instant
 ## ⚠️ Limitations
 
 - Attachments are not displayed in the hosted version.
-- Email will be removed after 30 days from the database.
+- Email will be removed after 1 hour from the database.
 
 ## 🤝 Contributing
 

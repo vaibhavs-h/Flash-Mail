@@ -122,10 +122,10 @@ test("plain-text fixture: derives fields with envelope taking priority over head
   assert.equal(row.message_id, "test-plain-001");
 
   const expiresAt = new Date(row.expires_at as string).getTime();
-  const expectedExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const expectedExpiry = Date.now() + 60 * 60 * 1000;
   assert.ok(
-    Math.abs(expiresAt - expectedExpiry) < 60_000,
-    "expires_at should be ~30 days out, not 7"
+    Math.abs(expiresAt - expectedExpiry) < 5_000,
+    "expires_at should be ~1 hour out"
   );
 });
 

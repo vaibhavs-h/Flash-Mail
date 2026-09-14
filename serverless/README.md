@@ -10,7 +10,7 @@ SES (inbound-smtp.ap-southeast-2.amazonaws.com)
   -> SNS topic (flashmail-ses-inbound)
   -> Lambda: smtpReceiver -> Supabase emails table (upsert on message_id)
                            -> on repeated failure -> SQS DLQ
-EventBridge (rate(1 hour))
+EventBridge (rate(5 minutes))
   -> Lambda: cleaner -> Supabase emails table (delete expired)
 ```
 
@@ -95,9 +95,9 @@ these to whatever IAM user runs `serverless:deploy`:
   `IAMFullAccess` — the core resources this stack creates.
 - `AmazonS3FullAccess` — missed initially; Serverless Framework auto-creates an S3
   bucket to hold deployment artifacts (packaged Lambda code, templates).
-- `AmazonEventBridgeFullAccess` — missed initially; the `cleaner` function's hourly
-  `schedule` event creates an `AWS::Events::Rule`, which needs its own permissions
-  separate from Lambda's.
+- `AmazonEventBridgeFullAccess` — missed initially; the `cleaner` function's
+  5-minute `schedule` event creates an `AWS::Events::Rule`, which needs its own
+  permissions separate from Lambda's.
 - `CloudWatchLogsFullAccess` — needed for the `logRetentionInDays` config to manage
   log group retention.
 

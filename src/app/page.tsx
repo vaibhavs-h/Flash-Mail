@@ -392,7 +392,7 @@ function HomeContent() {
                       : "bg-white border-black shadow-[4px_4px_0px_#000000] hover:shadow-[7px_7px_0px_#000000]"
                     }`}
                 >
-                  3) Messages auto-delete after 30 days so you don&#x27;t have to manage or clean up old emails.
+                  3) Messages auto-delete after 1 hour so you don&#x27;t have to manage or clean up old emails.
                 </p>
               </div>
             </div>
